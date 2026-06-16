@@ -249,9 +249,12 @@ const DIMENSIONS = [
     high:"I remembered all the instructions perfectly clearly." }
 ];
 
-const COLS = 400;          // fixed-resolution trace columns (device-independent)
-const N_SAMPLES = 101;     // export samples per dimension (0%..100% in 1% steps)
+const COLS = 1000;         // fixed-resolution trace columns (device-independent)
+const SAMPLE_SEC = 6;      // export one datapoint every 6 seconds of the session
 const SNAP_TOL = Math.round(COLS*0.05);  // within ~5% of an edge = close enough to finish the line to it
+// Number of export samples for a session of the given length (6 s resolution,
+// inclusive of both endpoints). e.g. 100 min -> 1001 points (0 s … 6000 s).
+function sampleCount(minutes){ return Math.max(2, Math.round(minutes*60/SAMPLE_SEC)+1); }
 const LS_KEY = "tet_state_v1";
 
 /* ----------------------------- State ----------------------------- */
@@ -516,11 +519,11 @@ function renderReview(){
 document.getElementById("btn-review-back").onclick=()=>{ cur=DIMENSIONS.length-1; renderDim(); show("screen-dim"); };
 
 /* ----------------------------- Export ----------------------------- */
-function sampleTrace(t){
-  // returns array of N_SAMPLES intensities (0..100) or null, by nearest defined column
+function sampleTrace(t, n){
+  // returns array of n intensities (0..100) or null, by nearest defined column
   const out=[];
-  for(let s=0;s<N_SAMPLES;s++){
-    const col=Math.round(s/(N_SAMPLES-1)*(COLS-1));
+  for(let s=0;s<n;s++){
+    const col=Math.round(s/(n-1)*(COLS-1));
     // nearest defined column search outward
     let v=t[col];
     if(Number.isNaN(v)){
@@ -569,6 +572,7 @@ function dimImagePNG(idx){
 }
 
 function buildJSON(){
+  const n = sampleCount(state.meta.minutes);
   const obj={
     instrument:"Temporal Experience Tracing (Communicating with Sleepers)",
     version:1,
@@ -577,13 +581,14 @@ function buildJSON(){
     date:state.meta.date,
     session:state.meta.session,
     session_minutes:state.meta.minutes,
-    n_samples:N_SAMPLES,
-    sample_note:"intensity 0=Not at all, 100=Extremely so; time_pct 0=start,100=end",
+    n_samples:n,
+    sample_interval_seconds:SAMPLE_SEC,
+    sample_note:"intensity 0=Not at all, 100=Extremely so; one sample every "+SAMPLE_SEC+" s from start (t=0) to end (t=session_minutes)",
     dimensions: DIMENSIONS.map((d,i)=>({
       order:i+1, key:d.key, title:d.title, category:d.category,
       prompt:d.prompt, anchor_low:d.low, anchor_high:d.high,
       comment:state.dims[i].comment||"",
-      samples:sampleTrace(state.dims[i].trace),   // length N_SAMPLES
+      samples:sampleTrace(state.dims[i].trace, n),   // length n, every SAMPLE_SEC seconds
       image_png:dimImagePNG(i)
     }))
   };
@@ -591,13 +596,15 @@ function buildJSON(){
 }
 
 function buildCSV(json){
-  const rows=[["participant_id","date","session","dimension_order","dimension_key","dimension_title","time_pct","time_minutes","intensity"]];
+  const n=json.n_samples;
+  const rows=[["participant_id","date","session","dimension_order","dimension_key","dimension_title","time_seconds","time_minutes","time_pct","intensity"]];
   json.dimensions.forEach(dim=>{
     dim.samples.forEach((val,s)=>{
-      const pct = s/(N_SAMPLES-1)*100;
-      const mins = pct/100*json.session_minutes;
+      const secs = s*json.sample_interval_seconds;
+      const mins = secs/60;
+      const pct = s/(n-1)*100;
       rows.push([json.participant_id,json.date,json.session,dim.order,dim.key,dim.title,
-                 pct.toFixed(0),mins.toFixed(2),(val==null?"":val)]);
+                 secs.toFixed(0),mins.toFixed(2),pct.toFixed(1),(val==null?"":val)]);
     });
   });
   return rows.map(r=>r.map(c=>{
