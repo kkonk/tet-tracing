@@ -9,7 +9,7 @@
   TET.html  --  Temporal Experience Tracing, iPad edition  (v1)
 =============================================================================
   "Communicating with Sleepers" post-sleep questionnaire.
-  Replaces the printed/pencil TET sheets: participant traces each of the 12
+  Replaces the printed/pencil TET sheets: participant traces each of the 14
   dimensions with finger or Apple Pencil directly in Safari on an iPad.
 
   - Self-contained single file. No install, no network, works fully offline.
@@ -55,6 +55,12 @@
   .field input{width:100%; font-size:18px; padding:12px 14px; border:1px solid var(--line);
     border-radius:10px; background:#fff;}
   .hint{color:var(--muted); font-size:13px; margin-top:4px;}
+
+  /* instructions */
+  .instr-lead{max-width:760px; margin:6px auto 4px; font-size:17px; line-height:1.5;}
+  .instr{max-width:760px; margin:0 auto;}
+  .instr ol{padding-left:24px; margin:8px 0 0;}
+  .instr li{font-size:16px; line-height:1.55; margin-bottom:11px;}
 
   /* graph */
   .graphwrap{max-width:1100px; margin:0 auto;}
@@ -124,6 +130,29 @@
       Unsaved progress from a previous attempt was found.
       <a href="#" id="resume-link">Resume it</a> or <a href="#" id="discard-link">start fresh</a>.
     </p>
+  </div>
+</section>
+
+<!-- ===================== INSTRUCTIONS ===================== -->
+<section id="screen-instructions" class="screen">
+  <h1>Instructions</h1>
+  <p class="instr-lead">You'll be shown 14 graphs, one at a time. Each one asks you to trace how a different aspect of your experience changed over the course of the session.</p>
+  <div class="instr">
+    <ol>
+      <li>Each graph is a different <b>Dimension</b> of your experience. Read its definition carefully every time, even if it seems familiar.</li>
+      <li><b>Time</b> runs left &rarr; right: the far left is the <b>start</b> of the session, the far right is the <b>end</b>.</li>
+      <li><b>Intensity</b> runs bottom &rarr; top: the bottom is <b>&ldquo;Not at all&rdquo;</b> and the top is <b>&ldquo;Extremely so&rdquo;</b>. What each end means is written beside the graph &mdash; read it before you draw.</li>
+      <li>Draw your line with your <b>finger or Apple Pencil</b>. Begin at the <b>left edge</b>, at the level that reflects where you were <b>just before the session began</b>.</li>
+      <li>Trace all the way across to the <b>right edge</b>. Show as much detail as you can &mdash; try to <b>avoid flat lines</b>, even where the experience didn't feel strong or didn't change much.</li>
+      <li>The line only moves <b>forward in time</b> &mdash; you can't draw backwards. You can <b>lift your finger to rest</b> and then carry on from where you left off; the line will reconnect.</li>
+      <li>To start a graph over, tap <b>Clear</b> and draw it again.</li>
+      <li>Use the <b>Comments</b> box under a graph only if you'd like to add a note.</li>
+      <li>When a graph is finished, tap <b>Next</b> to continue to the following one.</li>
+    </ol>
+  </div>
+  <div class="center" style="margin-top:8px;">
+    <button class="ghost" id="btn-instr-back">&larr; Back</button>
+    <button class="primary" id="btn-instr-start">Start tracing &rarr;</button>
   </div>
 </section>
 
@@ -199,6 +228,14 @@
 
 /* ----------------------------- Dimensions ----------------------------- */
 const DIMENSIONS = [
+  { key:"responsiveness", category:"Performance related", title:"Responsiveness",
+    prompt:"Trace the extent to which you were responding to the questions.",
+    low:"I was not responding to the questions.",
+    high:"I was responding to all the questions." },
+  { key:"accuracy", category:"Performance related", title:"Accuracy",
+    prompt:"Trace the extent to which the responses you gave were accurate.",
+    low:"My responses were not accurate.",
+    high:"My responses were all accurate." },
   { key:"alertness", category:"State related", title:"Alertness",
     prompt:"Trace the extent to which you felt awake and alert.",
     low:"I felt as deeply, soundly asleep as I would in the middle of the night when I am sleeping well.",
@@ -331,8 +368,10 @@ document.getElementById("btn-begin").onclick=()=>{
   state.meta={ id, date:document.getElementById("m-date").value||todayISO(),
                session:document.getElementById("m-session").value.trim(), minutes };
   save();
-  startDims();
+  show("screen-instructions");
 };
+document.getElementById("btn-instr-back").onclick=()=>{ show("screen-start"); };
+document.getElementById("btn-instr-start").onclick=()=>{ startDims(); };
 function startDims(){ cur=0; renderDim(); show("screen-dim"); }
 
 /* ----------------------------- Canvas / drawing ----------------------------- */
